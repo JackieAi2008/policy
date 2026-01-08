@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南山区产业政策智能匹配平台 | 1+4+N政策体系</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons (SVG图标库，更稳定) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ns: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9', // 南山蓝
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e', // 深海蓝
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['"Inter"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+                        'glass-hover': '0 8px 32px 0 rgba(14, 165, 233, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* 玻璃拟态效果 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.15);
+            border-color: #bae6fd;
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+
+        /* 动画 */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; opacity: 0; transform: translateY(5px); }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        /* 页面显示控制 */
+        .page-view { display: none; }
+        .page-view.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+        /* FAQ 详情动画 */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: sweep .3s ease-in-out; }
+        @keyframes sweep {
+            0%    {opacity: 0; transform: translateY(-5px)}
+            100%  {opacity: 1; transform: translateY(0)}
+        }
+
+        /* 选中状态 */
+        .tag-checkbox:checked + div {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+            box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.3);
+        }
+        
+        /* 导航激活状态 */
+        .nav-item.active {
+            color: #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.1);
+        }
+        .nav-item.active i {
+            color: #0ea5e9;
+        }
+        
+        /* PC端导航激活 */
+        .pc-nav-item.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Tooltip 样式 */
+        #global-tooltip {
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col bg-slate-50">
+
+    <!-- 全局 Tooltip 容器 -->
+    <div id="global-tooltip" class="fixed hidden bg-slate-800 text-white text-xs p-3 rounded-lg shadow-xl max-w-xs leading-relaxed opacity-0 transform translate-y-2">
+        <div id="tooltip-content"></div>
+        <div class="absolute w-2 h-2 bg-slate-800 transform rotate-45 -bottom-1 left-4"></div>
+    </div>
+
+    <!-- 顶部导航 (PC端) -->
+    <nav class="bg-ns-900 text-white sticky top-0 z-50 shadow-lg hidden md:block">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('home')">
+                    <div class="w-9 h-9 bg-gradient-to-br from-ns-400 to-ns-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i data-lucide="landmark" class="text-white w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg tracking-tight leading-none text-white">南山区政策通</h1>
+                        <p class="text-[10px] text-ns-200 mt-0.5 font-medium opacity-90">1+4+N 产业扶持体系</p>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button onclick="router.navigate('home')" class="pc-nav-item px-4 py-2 rounded-lg text-ns-100 hover:bg-white/10 hover:text-white transition-all flex items-center gap-2" data-page="home">
+                        <i data-lucide="search" class="w-4 h-4"></i> 政策匹配
+                    </button>
+                    <button onclick="router.navigate('docs')" class="pc-nav-item px-4 py-2 rounded-lg text-ns-100 hover:bg-white/10 hover:text-white transition-all flex items-center gap-2" data-page="docs">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> 政策原文
+                    </button>
+                    <button onclick="router.navigate('guide')" class="pc-nav-item px-4 py-2 rounded-lg text-ns-100 hover:bg-white/10 hover:text-white transition-all flex items-center gap-2" data-page="guide">
+                        <i data-lucide="book-open" class="w-4 h-4"></i> 申报指南
+                    </button>
+                    <button onclick="router.navigate('faq')" class="pc-nav-item px-4 py-2 rounded-lg text-ns-100 hover:bg-white/10 hover:text-white transition-all flex items-center gap-2" data-page="faq">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i> 常见问题
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 顶部导航 (移动端) -->
+    <nav class="bg-ns-900 text-white sticky top-0 z-50 shadow-md md:hidden flex items-center justify-between px-4 h-14">
+        <div class="flex items-center gap-2" onclick="router.navigate('home')">
+            <div class="w-7 h-7 bg-gradient-to-br from-ns-400 to-ns-600 rounded-lg flex items-center justify-center">
+                <i data-lucide="landmark" class="text-white w-4 h-4"></i>
+            </div>
+            <span class="font-bold text-base">南山区政策通</span>
+        </div>
+        <div class="text-xs text-ns-200" id="mobile-page-title">政策匹配</div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <div class="flex-grow w-full max-w-7xl mx-auto p-4 md:p-8 md:pb-12 pb-24">
+        
+        <!-- 页面 1: 政策匹配 (首页) -->
+        <div id="view-home" class="page-view active">
+            <div class="text-center mb-8 md:mb-12">
+                <h2 class="text-2xl md:text-3xl font-bold text-ns-900 mb-3">智能政策匹配</h2>
+                <p class="text-slate-600 text-sm md:text-base">基于您的企业画像，精准筛选“1+4+N”政策库</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                <!-- 左侧筛选器 -->
+                <div class="lg:col-span-3">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 lg:sticky lg:top-24">
+                        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="filter" class="w-4 h-4 text-ns-500"></i> 企业画像
+                            </h3>
+                            <button onclick="resetFilters()" class="text-xs text-ns-600 font-medium hover:bg-ns-50 px-2 py-1 rounded transition-colors">重置</button>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">所属行业</h4>
+                                <div class="flex flex-wrap gap-2" id="filter-industry"></div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">规模与性质</h4>
+                                <div class="flex flex-wrap gap-2" id="filter-scale"></div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">资质荣誉</h4>
+                                <div class="flex flex-wrap gap-2" id="filter-honor"></div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">当前需求</h4>
+                                <div class="flex flex-wrap gap-2" id="filter-action"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧结果 -->
+                <div class="lg:col-span-9">
+                    <!-- 统计卡片 -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+                            <div class="text-2xl font-bold text-ns-600 mb-1" id="count-total">0</div>
+                            <div class="text-xs text-slate-500">匹配政策</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+                            <div class="text-2xl font-bold text-emerald-600 mb-1" id="count-money">0</div>
+                            <div class="text-xs text-slate-500">资金支持</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+                            <div class="text-2xl font-bold text-violet-600 mb-1" id="count-talent">0</div>
+                            <div class="text-xs text-slate-500">人才引进</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm text-center">
+                            <div class="text-2xl font-bold text-amber-600 mb-1" id="count-space">0</div>
+                            <div class="text-xs text-slate-500">空间支持</div>
+                        </div>
+                    </div>
+
+                    <!-- 结果容器 -->
+                    <div id="results-container" class="space-y-4"></div>
+
+                    <!-- 初始状态 -->
+                    <div id="initial-state" class="bg-white rounded-2xl p-10 text-center border-2 border-dashed border-slate-200">
+                        <div class="w-16 h-16 bg-ns-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="sparkles" class="w-8 h-8 text-ns-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">开始匹配</h3>
+                        <p class="text-slate-500 text-sm">请在左侧（或上方）选择您的企业标签</p>
+                    </div>
+
+                    <!-- 空状态 -->
+                    <div id="empty-state" class="hidden bg-white rounded-2xl p-10 text-center border border-slate-200">
+                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="search-x" class="w-8 h-8 text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">未找到匹配项</h3>
+                        <p class="text-slate-500 text-sm">尝试减少或更换筛选条件</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面 2: 政策原文 -->
+        <div id="view-docs" class="page-view max-w-4xl mx-auto">
+            <div class="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-slate-200">
+                <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                        <i data-lucide="library" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">政策原文库</h2>
+                        <p class="text-sm text-slate-500">官方发布 · 权威解读</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="p-5 bg-slate-50 rounded-xl border border-slate-100 hover:border-ns-200 hover:bg-white hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-start gap-4">
+                            <i data-lucide="file-text" class="w-8 h-8 text-blue-500 shrink-0"></i>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg mb-1">南山区促进产业高质量发展专项资金“1+4+N”政策.docx</h3>
+                                <div class="flex gap-3 text-xs text-slate-500">
+                                    <span class="bg-white px-2 py-0.5 rounded border">DOCX</span>
+                                    <span>2024-04-08 生效</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 真实链接 -->
+                        <a href="https://www.kdocs.cn/l/caxwI0GGDfUe" target="_blank" class="px-5 py-2 bg-ns-600 text-white rounded-lg text-sm font-medium hover:bg-ns-700 transition-colors flex items-center gap-2 w-full md:w-auto justify-center">
+                            <i data-lucide="eye" class="w-4 h-4"></i> 在线查看 / 下载
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-5 bg-blue-50 rounded-xl border border-blue-100 text-sm text-blue-800 leading-relaxed">
+                    <h4 class="font-bold mb-2 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i> 内容概览</h4>
+                    <p>该文件包含南山区促进产业高质量发展专项资金管理办法（总则），以及人才、融资、用房、服务4大普惠性政策，和针对科技创新、低空经济、新能源、人工智能、生命科技、集成电路、总部企业等N个产业的专项扶持措施。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面 3: 申报指南 -->
+        <div id="view-guide" class="page-view max-w-4xl mx-auto">
+            <div class="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-slate-200">
+                <div class="flex items-center gap-3 mb-8 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                        <i data-lucide="book-open-check" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-900">申报操作指南</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- 左侧：入口与材料 -->
+                    <div class="space-y-6">
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <span class="w-6 h-6 bg-ns-600 text-white rounded-full flex items-center justify-center text-xs">1</span> 申报入口
+                            </h3>
+                            <p class="text-sm text-slate-600 mb-3">所有项目均通过“南山区产业发展综合资金申报系统”进行。</p>
+                            <a href="https://www.inanshan.org.cn/ztfw/zcfw/zjsb" target="_blank" class="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 hover:border-ns-400 hover:shadow-sm transition-all group">
+                                <span class="text-sm font-bold text-ns-600">i南山企业服务综合平台</span>
+                                <i data-lucide="external-link" class="w-4 h-4 text-slate-400 group-hover:text-ns-500"></i>
+                            </a>
+                        </div>
+
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <span class="w-6 h-6 bg-ns-600 text-white rounded-full flex items-center justify-center text-xs">2</span> 通用材料
+                            </h3>
+                            <ul class="space-y-2 text-sm text-slate-600">
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> 营业执照（三证合一）</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> 上年度纳税证明</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> 财务审计报告</li>
+                                <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-500"></i> 项目申请书（系统生成）</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：流程图 -->
+                    <div class="relative pl-6 border-l-2 border-slate-100 space-y-8 py-2">
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-ns-500"></div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">注册登录</h4>
+                            <p class="text-xs text-slate-500">法人实名认证（L2级以上）</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-ns-500"></div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">在线申报</h4>
+                            <p class="text-xs text-slate-500">填写申报书，上传附件</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-slate-300"></div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">审核核查</h4>
+                            <p class="text-xs text-slate-500">形式审查、部门初审、现场核查</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-slate-300"></div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">社会公示</h4>
+                            <p class="text-xs text-slate-500">区政府网站公示5个工作日</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-slate-300"></div>
+                            <h4 class="font-bold text-slate-800 text-sm mb-1">资金拨付</h4>
+                            <p class="text-xs text-slate-500">确认账户，下达计划</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面 4: 常见问题 -->
+        <div id="view-faq" class="page-view max-w-3xl mx-auto">
+            <div class="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-slate-200 min-h-[600px]">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600">
+                        <i data-lucide="help-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">常见问题库</h2>
+                        <p class="text-xs text-slate-500">已收录 100+ 条基于2024版政策的问答</p>
+                    </div>
+                </div>
+
+                <div class="relative mb-6">
+                    <input type="text" id="faq-search" oninput="filterFaq()" placeholder="搜索关键词，如：上市、租金、人才..." class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-ns-500 focus:ring-2 focus:ring-ns-100 outline-none text-sm bg-slate-50 transition-all">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+                </div>
+
+                <div class="flex gap-2 mb-6 overflow-x-auto hide-scroll pb-2">
+                    <button onclick="filterFaqCategory('all')" class="category-tab active px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all whitespace-nowrap">全部</button>
+                    <button onclick="filterFaqCategory('general')" class="category-tab px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all whitespace-nowrap">通用规则</button>
+                    <button onclick="filterFaqCategory('talent')" class="category-tab px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all whitespace-nowrap">人才住房</button>
+                    <button onclick="filterFaqCategory('finance')" class="category-tab px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all whitespace-nowrap">资金上市</button>
+                    <button onclick="filterFaqCategory('tech')" class="category-tab px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all whitespace-nowrap">产业专项</button>
+                </div>
+
+                <div id="faq-list" class="space-y-3"></div>
+                
+                <div id="faq-empty" class="hidden text-center py-12 text-slate-400">
+                    <p>未找到相关结果</p>
+                </div>
+
+                <div class="text-center mt-8 pt-4 border-t border-slate-100">
+                    <button id="load-more-btn" onclick="loadMoreFaq()" class="text-sm text-ns-600 font-medium hover:text-ns-700">加载更多</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部固定导航 (移动端) -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 md:hidden z-50 pb-safe">
+        <div class="grid grid-cols-4 h-16">
+            <button onclick="router.navigate('home')" class="nav-item flex flex-col items-center justify-center gap-1 text-slate-400 transition-colors" data-page="home">
+                <i data-lucide="search" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">匹配</span>
+            </button>
+            <button onclick="router.navigate('docs')" class="nav-item flex flex-col items-center justify-center gap-1 text-slate-400 transition-colors" data-page="docs">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">原文</span>
+            </button>
+            <button onclick="router.navigate('guide')" class="nav-item flex flex-col items-center justify-center gap-1 text-slate-400 transition-colors" data-page="guide">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">指南</span>
+            </button>
+            <button onclick="router.navigate('faq')" class="nav-item flex flex-col items-center justify-center gap-1 text-slate-400 transition-colors" data-page="faq">
+                <i data-lucide="help-circle" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium">问答</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 政策详情弹窗 -->
+    <div id="policy-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-end md:items-center justify-center md:p-4 text-center">
+                <div class="relative transform overflow-hidden bg-white text-left shadow-2xl transition-all md:rounded-2xl rounded-t-2xl w-full md:max-w-2xl h-[90vh] md:h-auto md:max-h-[85vh] flex flex-col">
+                    <!-- Header -->
+                    <div class="bg-white px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0 sticky top-0 z-10">
+                        <h3 class="text-lg font-bold text-slate-900 line-clamp-1" id="modal-title">政策标题</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50">
+                            <i data-lucide="x" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Scrollable Content -->
+                    <div class="px-6 py-6 overflow-y-auto flex-grow custom-scrollbar">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span id="modal-category" class="px-2.5 py-1 rounded text-xs font-bold bg-ns-50 text-ns-700 border border-ns-100">类别</span>
+                            <span class="text-xs text-slate-400 font-mono">编号：<span id="modal-id">--</span></span>
+                        </div>
+                        
+                        <div class="prose prose-slate prose-sm max-w-none">
+                            <div class="mb-6">
+                                <h4 class="text-sm font-bold text-slate-900 mb-2">政策摘要</h4>
+                                <div class="bg-slate-50 p-4 rounded-xl text-slate-600 leading-relaxed text-sm border border-slate-100" id="modal-desc"></div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 gap-4 mb-6">
+                                <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50">
+                                    <h4 class="text-xs font-bold text-blue-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                                        <i data-lucide="banknote" class="w-4 h-4"></i> 资助标准
+                                    </h4>
+                                    <p id="modal-amount" class="text-xl font-bold text-blue-600 mb-1"></p>
+                                    <p id="modal-amount-desc" class="text-xs text-slate-500"></p>
+                                </div>
+                                <div class="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100/50">
+                                    <h4 class="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4"></i> 核心条件
+                                    </h4>
+                                    <ul id="modal-conditions" class="list-disc pl-4 space-y-1.5 text-xs text-slate-600"></ul>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-slate-100 pt-4">
+                                <h4 class="text-sm font-bold text-slate-900 mb-2">申报流程</h4>
+                                <p id="modal-process" class="text-slate-500 text-xs leading-relaxed"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="bg-white px-6 py-4 border-t border-slate-100 flex justify-end gap-3 shrink-0 pb-safe">
+                        <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-colors text-sm">关闭</button>
+                        <a id="modal-apply-btn" href="https://www.inanshan.org.cn/ztfw/zcfw/zjsb" target="_blank" class="px-5 py-2.5 rounded-xl bg-ns-600 text-white font-medium hover:bg-ns-700 shadow-lg shadow-ns-500/30 transition-all flex items-center gap-2 text-sm">
+                            <i data-lucide="send" class="w-4 h-4"></i> 前往申报
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Logic -->
+    <script>
+        // --- 全量扩充的画像标签库 (含 Tooltip 描述) ---
+        const tags = {
+            industry: [
+                { id: 'tech', label: '新一代信息技术', icon: 'cpu' },
+                { id: 'ai', label: '人工智能', icon: 'bot' },
+                { id: 'ic', label: '集成电路', icon: 'circuit-board' },
+                { id: 'bio', label: '生命科技(生物医药)', icon: 'dna' },
+                { id: 'low_altitude', label: '低空经济', icon: 'plane' },
+                { id: 'new_energy', label: '新能源/储能', icon: 'zap' },
+                { id: 'manufacture', label: '高端制造', icon: 'factory' },
+                { id: 'digital', label: '数字经济/鸿蒙', icon: 'wifi' },
+                { id: 'finance', label: '金融/创投/私募', icon: 'landmark' },
+                { id: 'culture', label: '文体旅游', icon: 'palette' },
+                { id: 'esports', label: '电竞产业', icon: 'gamepad-2' },
+                { id: 'construction', label: '建筑工程', icon: 'hard-hat' },
+                { id: 'commerce', label: '商贸物流', icon: 'shopping-cart' },
+                { id: 'service', label: '重点服务业', icon: 'briefcase' }
+            ],
+            scale: [
+                { id: 'hq', label: '总部企业', icon: 'building-2' },
+                { id: 'green_channel', label: '绿色通道企业', icon: 'leaf', desc: '南山区政府认定的重点企业，享受政务、医疗、教育等“绿色通道”便利服务。' },
+                { id: 'listed', label: '上市企业', icon: 'trending-up' },
+                { id: 'little_giant', label: '专精特新/小巨人', icon: 'crown', desc: '指具备专业化、精细化、特色化、新颖化特征的中小企业，是优质中小企业的排头兵。' },
+                { id: 'ind_top100', label: '工业/商业百强', icon: 'bar-chart-2' },
+                { id: 'guishang', label: '规上企业(四上)', icon: 'bar-chart' },
+                { id: 'sme', label: '中小微企业', icon: 'user' },
+                { id: 'new_entry', label: '新引进企业', icon: 'map-pin' },
+                { id: 'foreign', label: '外商投资', icon: 'globe' },
+                { id: 'financial_license', label: '持牌金融机构', icon: 'landmark', desc: '经国家金融监管部门批准设立的银行、证券、保险等金融机构。' },
+                { id: 'association', label: '行业协会/机构', icon: 'users' }
+            ],
+            honor: [
+                { id: 'guogao', label: '国高企业', icon: 'award' },
+                { id: 'tech_center', label: '技术中心/实验室', icon: 'microscope' },
+                { id: 'single_champ', label: '制造业单项冠军', icon: 'trophy', desc: '长期专注于制造业某些特定细分产品市场，生产技术或工艺国际领先，单项产品市场占有率位居全球前列的企业。' },
+                { id: 'unicorn', label: '独角兽/瞪羚', icon: 'rocket', desc: '独角兽指估值超10亿美元的未上市初创企业；瞪羚指跨越死亡谷、进入高速成长期的创新型企业。' },
+                { id: 'luban', label: '鲁班奖/詹天佑奖', icon: 'hammer', desc: '中国建筑工程质量最高荣誉奖，代表国内建筑行业工程质量最高水平。' },
+                { id: 'tour_rating', label: 'A级景区/星级酒店', icon: 'star' },
+                { id: 'team', label: '创新创业团队', icon: 'users-2' },
+                { id: 'first_set', label: '首台(套)/首版次', icon: 'box', desc: '指国内实现重大技术突破、拥有知识产权、尚未取得市场业绩的首台（套）重大技术装备。' },
+                { id: 'ip_demo', label: '知识产权示范', icon: 'shield-check' }
+            ],
+            action: [
+                { id: 'rent_office', label: '租赁办公/厂房', icon: 'key' },
+                { id: 'buy_office', label: '购置/装修用房', icon: 'home' },
+                { id: 'rd_invest', label: '加大研发投入', icon: 'test-tube-2' },
+                { id: 'tech_trans', label: '技术改造', icon: 'settings-2' },
+                { id: 'standard', label: '标准制定', icon: 'ruler', desc: '主导或参与制定国际标准、国家标准、行业标准等。' },
+                { id: 'digital_trans', label: '数字化转型', icon: 'cloud-lightning' },
+                { id: 'financing', label: '贷款/融资/上市', icon: 'coins' },
+                { id: 'talent', label: '招才引智/安居', icon: 'user-plus' },
+                { id: 'market', label: '参展/首店/出海', icon: 'globe-2' },
+                { id: 'scenario', label: '应用场景建设', icon: 'layers', desc: '在低空经济、人工智能等领域建设具有示范效应的商业落地场景。' },
+                { id: 'equipment', label: '设备购置', icon: 'monitor' },
+                { id: 'event', label: '举办赛事/活动', icon: 'mic-2' }
+            ]
+        };
+
+        // --- 政策数据库 (扩充版，覆盖新标签) ---
+        const policies = [
+            // 普惠性
+            { id: 'PH-001', title: "人才安居补租支持", category: "人才引进", tags: ['hq','listed','little_giant','guishang','guogao','talent','green_channel'], shortDesc: "重点企业人才补租，解决住房困难。", fullDesc: "通过企业配租、补租的方式，解决南山区重点企业人才住房问题。企业获得配额后，自行分配给符合条件的人才。", amount: "约2万元/人/年", amountDesc: "依据年度配额", conditions: ["南山区重点企业名录", "人才在深无房"], process: "企业申请 -> 分配 -> 核查 -> 发放", icon: "home" },
+            { id: 'PH-002', title: "新引进企业租金补贴", category: "空间支持", tags: ['new_entry','rent_office','tech','finance','culture','sme'], shortDesc: "新引进企业租房补贴，最高600万元。", fullDesc: "对符合条件的新引进企业，按上年度实际支付租金的30%给予补贴。", amount: "最高600万元", amountDesc: "租金30%", conditions: ["新引进企业", "合同备案"], process: "申报 -> 核查 -> 公示 -> 拨付", icon: "key" },
+            { id: 'PH-003', title: "企业装修补贴", category: "空间支持", tags: ['new_entry','buy_office','tech'], shortDesc: "新引进企业装修补贴。", fullDesc: "对符合条件的新引进企业在南山区装修自用办公用房的，按500元/平方米给予补贴。", amount: "最高600万元", amountDesc: "500元/平米", conditions: ["新引进企业", "装修投入"], process: "申报 -> 审计 -> 公示 -> 拨付", icon: "paint-bucket" },
+            { id: 'PH-004', title: "科技金融贷款贴息", category: "资金支持", tags: ['sme','tech','financing','guogao'], shortDesc: "科技企业贷款利息补贴。", fullDesc: "支持辖区科技企业开展融资，按照实际支付利息最高70%给予资助。", amount: "最高100万元", amountDesc: "利息70%", conditions: ["科技企业", "实际发生利息"], process: "申报 -> 核定 -> 拨付", icon: "percent" },
+            { id: 'PH-005', title: "上市企业奖励", category: "资金支持", tags: ['listed','financing','tech','manufacture'], shortDesc: "境内外上市全流程奖励。", fullDesc: "境内上市最高400万（股改60+辅导240+上市100）；境外上市最高400万。", amount: "最高400万元", amountDesc: "分阶段资助", conditions: ["计划上市企业", "完成对应阶段"], process: "申报 -> 审核 -> 拨付", icon: "trending-up" },
+            // 重点产业
+            { id: 'HQ-001', title: "总部企业落户奖励", category: "资金支持", tags: ['hq','new_entry'], shortDesc: "新引进总部企业落户奖励。", fullDesc: "对新设立或迁入的总部企业，根据规模和贡献给予最高1亿元落户奖励。", amount: "最高5000万元", amountDesc: "依规模贡献分档", conditions: ["经认定为总部企业"], process: "认定 -> 申报 -> 拨付", icon: "building-2" },
+            { id: 'LA-001', title: "低空经济落户奖励", category: "资金支持", tags: ['low_altitude','new_entry','tech'], shortDesc: "无人机/eVTOL企业落户奖励。", fullDesc: "对新引进整机研发制造运营及关键零部件企业，依规模给予最高1亿元奖励。", amount: "最高1亿元", amountDesc: "依规模分档", conditions: ["低空经济主营业务"], process: "申报 -> 审核 -> 拨付", icon: "plane" },
+            { id: 'LA-002', title: "低空基础设施建设", category: "空间支持", tags: ['low_altitude','equipment','scenario'], shortDesc: "起降场、通信基站等建设补贴。", fullDesc: "支持企业投资建设低空信息基础设施及地面配套设施，按实际建设费用50%补贴。", amount: "最高100万元", amountDesc: "造价50%", conditions: ["备案许可", "公共服务"], process: "申报 -> 审计", icon: "tower-control" },
+            { id: 'NE-001', title: "新能源技术攻关", category: "研发创新", tags: ['new_energy','rd_invest','tech_center'], shortDesc: "储能/光伏/氢能关键技术攻关。", fullDesc: "获得市级科技重大专项资助的牵头单位，按市级资助60%配套。", amount: "最高600万元", amountDesc: "市级配套60%", conditions: ["获市级立项"], process: "配套申请 -> 拨付", icon: "zap" },
+            { id: 'IC-001', title: "集成电路流片支持", category: "研发创新", tags: ['ic','rd_invest','tech'], shortDesc: "首轮流片及MPW流片补贴。", fullDesc: "对首次工程流片费用给予最高10%补贴，依据工艺节点分档。", amount: "最高500万元", amountDesc: "流片费10%", conditions: ["集成电路设计企业"], process: "申报 ->审计 -> 拨付", icon: "cpu" },
+            { id: 'AI-001', title: "AI算力资源保障", category: "研发创新", tags: ['ai','tech','digital','rd_invest'], shortDesc: "购买算力补贴。", fullDesc: "对中小科技企业采购市内智算中心算力，按费用30%补贴。", amount: "最高100万元", amountDesc: "费用30%", conditions: ["采购算力用于研发"], process: "申报 -> 核定 -> 拨付", icon: "server" },
+            { id: 'AI-002', title: "应用场景建设支持", category: "研发创新", tags: ['ai','scenario'], shortDesc: "AI示范场景建设奖励。", fullDesc: "鼓励企业开展全域全时AI场景应用示范，按实际建设费用给予奖励。", amount: "最高300万元", amountDesc: "一次性奖励", conditions: ["行业引领", "非政府投资"], process: "评估 -> 奖励", icon: "layers" },
+            { id: 'BIO-001', title: "新药研发支持", category: "研发创新", tags: ['bio','rd_invest','tech'], shortDesc: "临床试验分阶段资助。", fullDesc: "完成临床前、I期、II期、III期临床试验，分别给予资助。", amount: "最高800万元", amountDesc: "分阶段", conditions: ["自主研发创新药"], process: "申报 -> 审核 -> 拨付", icon: "flask-conical" },
+            { id: 'MFG-001', title: "企业技术改造", category: "研发创新", tags: ['manufacture','tech_trans','guishang','equipment'], shortDesc: "工业企业技改投资补贴。", fullDesc: "对纳入统计的技术改造投资，按不超过投资额30%资助。", amount: "最高2000万元", amountDesc: "投资额30%", conditions: ["技改纳统"], process: "备案 -> 完工 -> 审计", icon: "settings" },
+            { id: 'MFG-002', title: "首台(套)装备奖励", category: "资金支持", tags: ['manufacture','first_set'], shortDesc: "首台套装备认定及采购奖励。", fullDesc: "对认定的国家/省级首台套给予100万奖励；采购方按采购额20%补贴。", amount: "最高300万元", amountDesc: "认定/采购", conditions: ["获认定证书"], process: "申报 -> 审核", icon: "box" },
+            { id: 'SPEC-001', title: "专精特新企业奖励", category: "资金支持", tags: ['little_giant','sme'], shortDesc: "小巨人/省市专精特新奖励。", fullDesc: "国家级小巨人奖励100万，省级专精特新奖励50万。", amount: "100万/50万", amountDesc: "一次性奖励", conditions: ["获认定证书"], process: "免申即享或简易申报", icon: "medal" },
+            { id: 'DIG-001', title: "服务业数字化转型", category: "研发创新", tags: ['service','digital','digital_trans'], shortDesc: "上云用数赋智补贴。", fullDesc: "采购云服务或工业互联网服务推进转型，按投入30%补贴。", amount: "最高100万元", amountDesc: "投入30%", conditions: ["营收达标"], process: "申报 -> 审计 -> 拨付", icon: "cloud" },
+            { id: 'CUL-002', title: "首店经济奖励", category: "资金支持", tags: ['commerce','market','first_store'], shortDesc: "开设首店奖励。", fullDesc: "在南山开设中国/华南/深圳首店，给予一次性奖励。", amount: "最高100万元", amountDesc: "依级别分档", conditions: ["纳入零售统计"], process: "申报 -> 审核 -> 拨付", icon: "shopping-bag" },
+            { id: 'CONST-001', title: "优质建筑业企业奖励", category: "资金支持", tags: ['construction','new_entry','luban'], shortDesc: "新迁入建筑企业奖励。", fullDesc: "新迁入特级/一级资质建筑企业，分别奖600万/200万。", amount: "最高600万元", amountDesc: "一次性", conditions: ["资质等级"], process: "申报 -> 审核 -> 拨付", icon: "hard-hat" },
+            { id: 'FIN-001', title: "私募机构落户", category: "资金支持", tags: ['finance','new_entry','financial_license'], shortDesc: "私募机构落户奖励。", fullDesc: "按管理规模1‰给予落户奖励。", amount: "最高1亿元", amountDesc: "规模1‰", conditions: ["备案私募机构"], process: "申报 -> 审核 -> 拨付", icon: "landmark" },
+            { id: 'STD-001', title: "标准化战略支持", category: "研发创新", tags: ['tech','standard'], shortDesc: "主导/参与标准制定奖励。", fullDesc: "对主导制定国际、国家、行业标准的企业，给予配套资助。", amount: "最高50万元", amountDesc: "按比例配套", conditions: ["标准正式发布"], process: "申报 -> 审核", icon: "ruler" }
+        ];
+
+        // --- 3. FAQ 数据 (100条扩充版) ---
+        const faqData = [
+            // 1. 通用规则 (1-10)
+            { c: 'general', q: "政策的有效期是多久？", a: "本措施自2024年4月8日起施行，有效期为三年。" },
+            { c: 'general', q: "申报主体需要满足哪些基本条件？", a: "原则上须在南山辖区内登记注册、具有独立法人资格；履行统计义务、守法经营、诚实守信、有规范财务制度；积极配合区委区政府工作。" },
+            { c: 'general', q: "分公司可以申请资金吗？", a: "一般要求独立法人。但金融机构一级分支机构、律师事务所、会计师事务所等特定主体可例外申报部分项目。" },
+            { c: 'general', q: "资金有总额限制吗？", a: "坚持总量控制原则。每家单位单个扶持项目资助金额原则上不得超过1000万元（总部、上市等特殊项目除外）。" },
+            { c: 'general', q: "可以重复申报吗？", a: "同一项目不得重复申报资金扶持。评审类项目同一单位年度同一类别原则上只支持一个。" },
+            { c: 'general', q: "申报后迁出南山怎么办？", a: "提出申请后注册地或统计关系迁出的不予资助。事前资助项目如无法履约需解除合同并收回资金。" },
+            { c: 'general', q: "企业有违规记录还能申请吗？", a: "被纳入严重失信主体名单或失信惩戒措施清单的，不予资助。" },
+            { c: 'general', q: "在哪里进行申报？", a: "通过“i南山企业服务综合平台”进行无纸化申报。" },
+            { c: 'general', q: "公示期是多久？", a: "区政府网站公示5个工作日。" },
+            { c: 'general', q: "如何界定“新引进企业”？", a: "通常指在政策有效期内新注册或新迁入南山区的企业，具体以各分项操作规程为准。" },
+
+            // 2. 人才与住房 (11-25)
+            { c: 'talent', q: "新引进硕士研究生有什么补贴？", a: "30周岁以下、世界前150名大学或双一流高校全日制硕士，连续工作满一年，给予3万元一次性生活补贴。" },
+            { c: 'talent', q: "实习生补贴标准是多少？", a: "大专生1000元/月、本科生2000元/月、硕士3000元/月、博士5000元/月，最长12个月。" },
+            { c: 'talent', q: "人才补租金额是多少？", a: "约2万元/人/年，具体根据年度配额和标准确定。" },
+            { c: 'talent', q: "人力资源机构引进人才有奖励吗？", a: "引进急需紧缺人才，单笔最高20万元，每家机构每年最高100万元。" },
+            { c: 'talent', q: "顶尖人才创业有什么支持？", a: "经认定的顶尖人才创办企业，最高给予2000万元资助。" },
+            { c: 'talent', q: "绿色通道企业人才有什么奖励？", a: "连续工作1年以上的优秀人才，每人每年最高60万元奖励。" },
+            { c: 'talent', q: "高技能人才奖励多少？", a: "连续工作3年以上的高技能人才，最高10万元奖励。" },
+            { c: 'talent', q: "金融证书有补贴吗？", a: "取得CFA、FRM等执业证书的，给予一次性2万元奖励。" },
+            { c: 'talent', q: "港澳青年创业资助？", a: "获港澳官方资助的，按50%配套，最高50万元。" },
+            { c: 'talent', q: "人才房可以个人申请吗？", a: "补租通常由企业统一申请配额，再分配给符合条件的人才。" },
+            { c: 'talent', q: "新引进企业人才安置补贴？", a: "依规模等条件，给予核心人才一次性安置补贴，每家企业最高600万元。" },
+            { c: 'talent', q: "实训基地有奖励吗？", a: "获评优秀实训基地的，给予年度最高10万元奖励。" },
+            { c: 'talent', q: "博士后出站留深有区级补贴吗？", a: "本政策主要侧重实习和新引进落户，博士后资助建议咨询市级政策。" },
+            { c: 'talent', q: "非全日制硕士能领3万补贴吗？", a: "政策明确要求“全日制硕士学位”。" },
+            { c: 'talent', q: "住房补租期限？", a: "通常为3年。" },
+
+            // 3. 资金与上市 (26-40)
+            { c: 'finance', q: "境内上市奖励多少？", a: "最高400万元（股改60万+辅导240万+上市100万）。" },
+            { c: 'finance', q: "境外上市奖励多少？", a: "直接上市最高400万元，间接上市最高300万元。" },
+            { c: 'finance', q: "新三板挂牌奖励？", a: "首挂最高60万，进创新层最高40万；计划北交所上市最高300万。" },
+            { c: 'finance', q: "贷款利息补贴比例？", a: "按实际支付利息最高70%资助，每年最高100万元。" },
+            { c: 'finance', q: "知识产权质押融资补贴？", a: "按实际成本70%资助，每年最高150万元。" },
+            { c: 'finance', q: "绿色融资补贴？", a: "按融资费用50%资助，每年最高100万元。" },
+            { c: 'finance', q: "私募机构落户奖励？", a: "按管理规模1‰，最高1亿元。" },
+            { c: 'finance', q: "上市募投项目奖励？", a: "募集资金50%以上投向南山的，按投资额5‰-7‰奖励，最高2000万元。" },
+            { c: 'finance', q: "供应链金融融资补贴？", a: "按融资费用70%资助，每年最高100万元。" },
+            { c: 'finance', q: "金融企业购房补贴？", a: "最高3000元/平米，总额最高3000万元。" },
+            { c: 'finance', q: "金融企业租房补贴？", a: "按租金30%补贴，每年最高1000万元。" },
+            { c: 'finance', q: "创业获得投资有奖励吗？", a: "科技企业获机构投资，按投资额10%资助，最高300万元。" },
+            { c: 'finance', q: "S基金运营奖励？", a: "按实际投资规模2%奖励管理企业，最高2000万元。" },
+            { c: 'finance', q: "出口信用保险补贴？", a: "按保费50%资助，每年最高300万元。" },
+            { c: 'finance', q: "外资企业奖励？", a: "实际使用外资1000万美元以上，按1%奖励，最高1000万元。" },
+
+            // 4. 用房与空间 (41-50)
+            { c: 'general', q: "新引进企业租房补贴？", a: "按上年度实际租金30%补贴，最高600万元（一次性）。" },
+            { c: 'general', q: "新引进企业装修补贴？", a: "按500元/平方米补贴，最高600万元。" },
+            { c: 'general', q: "购置办公用房补贴？", a: "符合条件的新引进企业，按1500元/平方米补贴，最高2000万元。" },
+            { c: 'general', q: "总部企业购房补贴？", a: "最高3000元/平方米，总额最高3000万元。" },
+            { c: 'general', q: "总部企业租房补贴？", a: "前3年30%，后2年15%，每年最高400万/200万。" },
+            { c: 'general', q: "专精特新企业租房补贴？", a: "参照总部企业标准，前3年30%，后2年15%。" },
+            { c: 'general', q: "工业企业租房补贴？", a: "规上工业企业，按租金50%补贴，最高50元/平/月，年上限1000万。" },
+            { c: 'general', q: "能否申请政策性用房？", a: "总部企业、专精特新等重点企业可申请，租金最低为市场价30%。" },
+            { c: 'general', q: "租房补贴能领几年？", a: "通常为3年，部分重点企业可达5年。" },
+            { c: 'general', q: "享受购房补贴后能卖吗？", a: "5年内不得出售、出租或改变用途。" },
+
+            // 5. 产业专项 - 低空/新能源/科创 (51-85)
+            { c: 'tech', q: "低空经济落户最高奖多少？", a: "最高1亿元。" },
+            { c: 'tech', q: "无人机航线补贴？", a: "小型无人机最高20万/条，大中型最高35万/条。" },
+            { c: 'tech', q: "低空基础设施补贴？", a: "按造价50%补贴，单个项目最高100万元。" },
+            { c: 'tech', q: "新能源企业落户？", a: "最高1亿元奖励。" },
+            { c: 'tech', q: "储能项目补贴？", a: "200元/千瓦时，最高100万元。" },
+            { c: 'tech', q: "光储超充示范站补贴？", a: "按采购额20%，最高300万元。" },
+            { c: 'tech', q: "技术攻关配套？", a: "获市级重大专项资助的，按市级60%配套，最高600万元。" },
+            { c: 'tech', q: "集成电路流片补贴？", a: "首次工程流片最高10%补贴，最高500万元。" },
+            { c: 'tech', q: "购买EDA工具补贴？", a: "按费用60%补贴，最高200万元。" },
+            { c: 'tech', q: "AI算力补贴？", a: "按费用30%补贴，最高100万元。" },
+            { c: 'tech', q: "新药研发资助？", a: "分阶段资助：临床前150万，I期200万，II期500万，III期800万。" },
+            { c: 'tech', q: "医疗器械注册奖励？", a: "三类器械最高100万，二类最高50万。" },
+            { c: 'tech', q: "国高企业奖励？", a: "高成长性国高企业（营收增20%+研发占比5%），一次性奖100万元。" },
+            { c: 'tech', q: "研发投入支持？", a: "按扣除委外后的研发费用资助，最高200万元。" },
+            { c: 'tech', q: "孵化器建设奖励？", a: "国家级100万，省级60万，市级30万。" },
+            { c: 'tech', q: "首台（套）装备奖励？", a: "认定奖励100万；采购方按20%补贴，最高300万。" },
+            { c: 'tech', q: "技术改造资助？", a: "按投资额30%资助，最高2000万元。" },
+            { c: 'tech', q: "首版次软件资助？", a: "按合同金额30%资助，最高150万元。" },
+            { c: 'tech', q: "鸿蒙应用开发奖励？", a: "通过认证且下载量达标，最高200万元。" },
+            { c: 'tech', q: "首店经济奖励？", a: "开设中国/华南/深圳首店，最高100万元。" },
+            { c: 'tech', q: "电竞俱乐部奖励？", a: "落户最高500万；参赛获奖最高100万。" },
+            { c: 'tech', q: "绿色低碳认证奖励？", a: "入库奖励30万；碳中和认证补贴5万。" },
+            { c: 'tech', q: "建筑业落户奖励？", a: "特级资质600万，一级资质200万。" },
+            { c: 'tech', q: "鲁班奖奖励？", a: "最高300万元。" },
+            { c: 'tech', q: "A级景区奖励？", a: "5A级300万，4A级200万，3A级100万。" },
+            { c: 'tech', q: "服务业数字化转型？", a: "采购云服务/工业互联网，按30%补贴，最高100万。" },
+            { c: 'tech', q: "展会参展补贴？", a: "境外重点展会，展位费50%，最高100万元。" },
+            { c: 'tech', q: "行业协会落户？", a: "最高50万元开办资助。" },
+            { c: 'tech', q: "跨境电商支持？", a: "出口信用保险最高300万元。" },
+            { c: 'tech', q: "无人机出口支持？", a: "建设出口贸易集聚区，提供通关便利。" },
+            { c: 'tech', q: "购买绿电补贴？", a: "按成本比例补贴，最高50万元。" },
+            { c: 'tech', q: "商业秘密示范企业？", a: "一次性最高30万元。" },
+            { c: 'tech', q: "知识产权维权？", a: "仲裁费30%支持，最高15万元。" },
+            { c: 'tech', q: "标准制定奖励？", a: "主导国际/国家标准，最高50万元。" },
+            { c: 'tech', q: "联合实验室？", a: "按出资额30%资助，最高100万元。" }
+        ];
+
+        // --- 路由系统 ---
+        const router = {
+            currentPage: 'home',
+            navigate(page) {
+                this.currentPage = page;
+                document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+                document.getElementById(`view-${page}`).classList.add('active');
+                
+                document.querySelectorAll('.pc-nav-item').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.page === page);
+                });
+
+                document.querySelectorAll('.nav-item').forEach(btn => {
+                    const isActive = btn.dataset.page === page;
+                    btn.classList.toggle('text-ns-600', isActive);
+                    btn.classList.toggle('text-slate-400', !isActive);
+                    const icon = btn.querySelector('svg');
+                    if(icon) {
+                        if(isActive) icon.classList.add('text-ns-600');
+                        else icon.classList.remove('text-ns-600');
+                    }
+                });
+
+                const titles = { 'home': '政策匹配', 'docs': '政策原文', 'guide': '申报指南', 'faq': '常见问题' };
+                document.getElementById('mobile-page-title').innerText = titles[page];
+                window.scrollTo(0, 0);
+            }
+        };
+
+        // --- 功能逻辑 ---
+
+        function init() {
+            renderTags('filter-industry', tags.industry);
+            renderTags('filter-scale', tags.scale);
+            renderTags('filter-honor', tags.honor);
+            renderTags('filter-action', tags.action);
+            
+            initFaq();
+            router.navigate('home');
+            lucide.createIcons();
+            initTooltip();
+        }
+
+        // 标签渲染 (含 Tooltip 逻辑)
+        function renderTags(containerId, data) {
+            document.getElementById(containerId).innerHTML = data.map(item => `
+                <label class="cursor-pointer group relative">
+                    <input type="checkbox" class="hidden tag-checkbox" value="${item.id}" onchange="filterPolicies()">
+                    <div class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-medium transition-all hover:border-ns-400 flex items-center gap-1.5 select-none ${item.desc ? 'border-b-2 border-b-slate-300 border-dashed' : ''}"
+                         ${item.desc ? `onmouseenter="showTooltip(event, '${item.desc}')" onmouseleave="hideTooltip()"` : ''}>
+                        <i data-lucide="${item.icon}" class="w-3.5 h-3.5 opacity-70"></i> 
+                        ${item.label}
+                        ${item.desc ? '<span class="absolute -top-1 -right-1 w-2 h-2 bg-ns-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>' : ''}
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        // Tooltip 功能
+        function initTooltip() {
+            const tooltip = document.getElementById('global-tooltip');
+            document.addEventListener('mousemove', (e) => {
+                if (!tooltip.classList.contains('hidden')) {
+                    // tooltip.style.top = e.clientY - tooltip.offsetHeight - 10 + 'px';
+                    // tooltip.style.left = e.clientX - 20 + 'px';
+                }
+            });
+        }
+
+        function showTooltip(e, text) {
+            const tooltip = document.getElementById('global-tooltip');
+            const content = document.getElementById('tooltip-content');
+            content.innerText = text;
+            tooltip.classList.remove('hidden');
+            
+            const rect = e.target.getBoundingClientRect();
+            tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+            tooltip.style.left = (rect.left) + 'px';
+            
+            // 简单的淡入动画
+            setTimeout(() => tooltip.classList.remove('opacity-0', 'translate-y-2'), 10);
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('global-tooltip');
+            tooltip.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => tooltip.classList.add('hidden'), 200);
+        }
+
+        function filterPolicies() {
+            const checkboxes = document.querySelectorAll('.tag-checkbox:checked');
+            const selectedTags = Array.from(checkboxes).map(cb => cb.value);
+            const container = document.getElementById('results-container');
+            const emptyState = document.getElementById('empty-state');
+            const initialState = document.getElementById('initial-state');
+
+            if (selectedTags.length === 0) {
+                container.innerHTML = '';
+                initialState.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                updateStats([]);
+                return;
+            }
+
+            initialState.classList.add('hidden');
+
+            const scored = policies.map(p => ({
+                policy: p,
+                score: p.tags.filter(t => selectedTags.includes(t)).length
+            })).filter(i => i.score > 0).sort((a, b) => b.score - a.score);
+
+            const filtered = scored.map(i => i.policy);
+            
+            updateStats(filtered);
+            renderResults(filtered);
+        }
+
+        function updateStats(list) {
+            document.getElementById('count-total').innerText = list.length;
+            document.getElementById('count-money').innerText = list.filter(p => p.category === '资金支持').length;
+            document.getElementById('count-talent').innerText = list.filter(p => p.category === '人才引进').length;
+            document.getElementById('count-space').innerText = list.filter(p => p.category === '空间支持').length;
+        }
+
+        function renderResults(list) {
+            const container = document.getElementById('results-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            container.innerHTML = '';
+            if (list.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            list.forEach((p, idx) => {
+                const el = document.createElement('div');
+                el.className = 'glass-card rounded-xl p-4 cursor-pointer fade-in bg-white';
+                el.style.animationDelay = `${idx * 0.05}s`;
+                el.onclick = () => openModal(p);
+                
+                const catColor = { '资金支持':'emerald', '人才引进':'violet', '空间支持':'amber', '研发创新':'blue' }[p.category] || 'slate';
+                
+                el.innerHTML = `
+                    <div class="flex gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-${catColor}-50 text-${catColor}-600 flex items-center justify-center shrink-0">
+                            <i data-lucide="${p.icon}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] px-2 py-0.5 rounded bg-${catColor}-50 text-${catColor}-700 font-bold border border-${catColor}-100">${p.category}</span>
+                                <h3 class="font-bold text-slate-800 text-sm md:text-base truncate">${p.title}</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-3 line-clamp-1">${p.shortDesc}</p>
+                            <div class="flex justify-between items-center pt-2 border-t border-slate-50">
+                                <span class="text-xs font-bold text-ns-600">${p.amount}</span>
+                                <span class="text-[10px] text-slate-400 flex items-center gap-1">详情 <i data-lucide="chevron-right" class="w-3 h-3"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+            lucide.createIcons();
+        }
+
+        function resetFilters() {
+            document.querySelectorAll('.tag-checkbox').forEach(cb => cb.checked = false);
+            filterPolicies();
+        }
+
+        function openModal(p) {
+            document.getElementById('modal-title').innerText = p.title;
+            document.getElementById('modal-id').innerText = p.id;
+            document.getElementById('modal-category').innerText = p.category;
+            document.getElementById('modal-desc').innerText = p.fullDesc;
+            document.getElementById('modal-amount').innerText = p.amount;
+            document.getElementById('modal-amount-desc').innerText = p.amountDesc;
+            document.getElementById('modal-process').innerText = p.process;
+            document.getElementById('modal-conditions').innerHTML = p.conditions.map(c => `<li>${c}</li>`).join('');
+            
+            document.getElementById('policy-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('policy-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        let currentFaqCat = 'all';
+        let faqLimit = 20;
+        
+        function initFaq() {
+            filterFaqCategory('all');
+        }
+
+        function filterFaqCategory(cat) {
+            currentFaqCat = cat;
+            document.querySelectorAll('.category-tab').forEach(b => {
+                const active = b.innerText === (cat === 'all' ? '全部' : (cat === 'finance' ? '资金上市' : (cat==='talent'?'人才住房':(cat==='tech'?'产业专项':'通用规则'))));
+                b.className = `category-tab px-3 py-1.5 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${active ? 'bg-ns-500 text-white border-ns-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`;
+            });
+            renderFaq();
+        }
+
+        function filterFaq() {
+            renderFaq();
+        }
+
+        function renderFaq() {
+            const key = document.getElementById('faq-search').value.toLowerCase();
+            const list = faqData.filter(i => (currentFaqCat === 'all' || i.c === currentFaqCat) && (i.q.includes(key) || i.a.includes(key)));
+            
+            const container = document.getElementById('faq-list');
+            container.innerHTML = list.slice(0, faqLimit).map(i => `
+                <details class="bg-slate-50 rounded-xl border border-slate-100 group">
+                    <summary class="flex justify-between items-start p-4 cursor-pointer font-medium text-sm text-slate-800">
+                        <span class="flex gap-2"><span class="text-ns-500 font-bold">Q.</span> ${i.q}</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform mt-0.5"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-0 text-xs text-slate-600 leading-relaxed pl-8">
+                        ${i.a}
+                    </div>
+                </details>
+            `).join('');
+            
+            document.getElementById('faq-empty').classList.toggle('hidden', list.length > 0);
+            document.getElementById('load-more-btn').classList.toggle('hidden', list.length <= faqLimit);
+            lucide.createIcons();
+        }
+
+        function loadMoreFaq() {
+            faqLimit += 10;
+            renderFaq();
+        }
+
+        init();
+    </script>
+</body>
+</html>
